@@ -1,0 +1,27 @@
+# OpsWatch inventory. Draft on Day 1, confirm against the real lab on Day 3.
+defaults:
+  ssh_user: opswatch
+  ssh_key: ~/.ssh/opswatch
+  ssh_timeout_seconds: 10
+
+hosts:
+  web01:
+    address: 192.168.56.11
+    role: web
+    checks: [disk, services, uptime, http, cert]
+    services: [nginx]
+    urls:
+      - https://192.168.56.11/
+    ca_cert: /opswatch/context/certs/web01.crt   # copy of web01's self-signed cert, captured on Day 3
+
+  app01:
+    address: 192.168.56.12
+    role: app
+    checks: [disk, services, uptime]
+    services: [opswatch-demo]
+
+  stor01:
+    address: 192.168.56.13
+    role: storage
+    checks: [disk, services, uptime]
+    services: []
