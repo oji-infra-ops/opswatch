@@ -68,7 +68,8 @@ def ssh_argv(host: Host, remote_command: str) -> list[str]:
         "-o", "BatchMode=yes",
         "-o", "ConnectTimeout=10",
         "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "IdentitiesOnly=yes",  # only the inventory key: never wait on an ssh-agent (SPEC §2)
+        "-o", "IdentitiesOnly=yes",  # offer only the inventory key (SPEC §2)
+        "-o", "IdentityAgent=none",  # never contact an ssh-agent, not even to look the key up
         "-i", os.path.expanduser(host.ssh_key),
         "-l", host.ssh_user,
         host.address,

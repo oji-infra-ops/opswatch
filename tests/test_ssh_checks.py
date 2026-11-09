@@ -191,6 +191,7 @@ def test_ssh_argv_uses_spec_options_and_only_the_inventory_key():
         "ConnectTimeout=10",
         "StrictHostKeyChecking=accept-new",
         "IdentitiesOnly=yes",
+        "IdentityAgent=none",
     ]
     assert argv[argv.index("-i") + 1] == os.path.expanduser("~/.ssh/opswatch")
     assert argv[argv.index("-l") + 1] == "opswatch"
