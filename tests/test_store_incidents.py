@@ -115,3 +115,21 @@ def test_write_failure_rolls_back_everything(db, monkeypatch):
     monkeypatch.setattr(store, "_evaluate", real)
     commit(db, 2, result("Critical"), result("Critical", host="web01"))
     assert len(incidents(db)) == 1
+
+
+def test_retention_prunes_old_results_but_keeps_incident_evidence(db):
+    run_sequence(db, ["OK", "Critical", "Critical", "OK", "OK", "OK"], start=100)  # incident 101..104
+    later = 100 + store.RETENTION_SLOTS + 10
+    outcome = commit(db, later, result("OK"))
+    kept = {r["slot"] for r in db.execute("SELECT slot FROM check_results")}
+    # slots 100 and 105 are plain OKs older than 30 days: pruned. 101, 102 open it; 103, 104 resolve it.
+    assert kept == {101, 102, 103, 104, later}
+    assert outcome.pruned == 2
+    (inc,) = incidents(db)
+    assert inc["status"] == "resolved" and inc["opening_evidence"]
+
+
+def test_retention_keeps_results_inside_the_window(db):
+    run_sequence(db, ["OK", "OK", "OK"], start=100)
+    outcome = commit(db, 100 + store.RETENTION_SLOTS, result("OK"))
+    assert outcome.pruned == 0  # slot 100 is exactly 30 days old: kept

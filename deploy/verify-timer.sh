@@ -6,7 +6,7 @@
 # Usage (on ops-ctl, after installing the units):  bash deploy/verify-timer.sh
 set -uo pipefail
 
-DB=${OPSWATCH_DB:-$HOME/opswatch.db}
+DB=${OPSWATCH_DB:-/var/lib/opswatch/opswatch.db}
 EXPECTED_RESULTS=${EXPECTED_RESULTS:-15}   # 3 hosts x 5 checks in the lab
 fails=0
 pass() { echo "PASS  $*"; }

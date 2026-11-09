@@ -1,5 +1,5 @@
 # One OpsWatch run for the current 5-minute slot (SPEC §6.3). Started by opswatch.timer.
-# Paths match the lab's ops-ctl: repo cloned to /home/azureuser/opswatch with a .venv inside.
+# Layout installed by lab/ansible/site.yml: code in /opt/opswatch, database in /var/lib/opswatch.
 [Unit]
 Description=OpsWatch health checks (one slot)
 After=network-online.target
@@ -8,9 +8,9 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=azureuser
-WorkingDirectory=/home/azureuser/opswatch
-Environment=OPSWATCH_DB=/home/azureuser/opswatch.db
-Environment=OPSWATCH_INVENTORY=/home/azureuser/opswatch/context/inventory.yaml
-ExecStart=/home/azureuser/opswatch/.venv/bin/python -m opswatch run --store
+WorkingDirectory=/opt/opswatch
+Environment=OPSWATCH_DB=/var/lib/opswatch/opswatch.db
+Environment=OPSWATCH_INVENTORY=/opt/opswatch/context/inventory.yaml
+ExecStart=/opt/opswatch/.venv/bin/python -m opswatch run --store
 # A slot is 300 s; a run that somehow lasts longer is stopped so the next slot can start.
 TimeoutStartSec=240

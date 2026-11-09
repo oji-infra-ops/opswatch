@@ -81,6 +81,7 @@ def main(argv: list[str] | None = None, probes: Probes | None = None,
         "results": len(results),
         "incidents_opened": outcome.opened,
         "incidents_resolved": outcome.resolved,
+        "results_pruned": outcome.pruned,
         "seconds_from_process_start_to_commit": round(total, 3),
         "not_ok": [f"{r.host}/{r.check}: {r.severity} {r.value}" for r in results if r.severity != "OK"],
     }

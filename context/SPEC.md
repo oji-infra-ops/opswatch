@@ -171,6 +171,7 @@ See `severity.md`. Summary: Unknown is never shown as OK; incidents are keyed by
 - A run's results, incident changes and run record are written in **one SQLite transaction**. On any write failure the transaction rolls back, nothing from that run is kept, and the run reports a run-level error with a non-zero exit.
 - A run counts as complete only after its commit.
 - The run's identity is its schedule slot. A slot can be committed once; a retry of an already-committed slot writes nothing and can't advance a streak twice.
+- Retention: in the same transaction, each run deletes check results more than 30 days (8,640 slots) older than its own slot, except results an incident or a pending streak still points at. Every incident keeps its opening and resolving evidence for good.
 
 ### 6.3 Scheduling
 

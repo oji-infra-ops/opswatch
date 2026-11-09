@@ -7,9 +7,9 @@ After=network-online.target
 [Service]
 Type=simple
 User=azureuser
-WorkingDirectory=/home/azureuser/opswatch
-Environment=OPSWATCH_DB=/home/azureuser/opswatch.db
-ExecStart=/home/azureuser/opswatch/.venv/bin/uvicorn opswatch.web:app --host 127.0.0.1 --port 8000
+WorkingDirectory=/opt/opswatch
+Environment=OPSWATCH_DB=/var/lib/opswatch/opswatch.db
+ExecStart=/opt/opswatch/.venv/bin/uvicorn opswatch.web:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 RestartSec=5
 

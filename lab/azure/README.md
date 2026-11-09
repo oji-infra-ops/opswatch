@@ -71,6 +71,27 @@ az network nsg rule update -g $RG --nsg-name opswatch-nsg -n ssh-to-ops-ctl-from
   --source-address-prefixes <new-laptop-ip>/32
 ```
 
+## OpsWatch itself
+
+The last play in `site.yml` deploys OpsWatch on ops-ctl: code in `/opt/opswatch` (git checkout, venv), database in `/var/lib/opswatch/opswatch.db`, the 5-minute timer and the web UI as systemd units, and `/etc/profile.d/opswatch.sh` so manual runs use the timer's database and lock. Pin a release with `-e opswatch_version=v1.0`. Check it with `bash /opt/opswatch/deploy/verify-timer.sh`.
+
+The web UI listens on `127.0.0.1:8000` only (no login). From your laptop: `ssh -L 8000:127.0.0.1:8000 azureuser@<ops-ctl public IP>`, then open http://localhost:8000.
+
+## Rebuild everything with one command (Cloud Shell)
+
+```bash
+ALLOWED_IP=<your-laptop-ip> PUBKEY_FILE=~/id_ed25519.pub bash lab/azure/rebuild.sh
+```
+
+Deletes `rg-opswatch-lab` if it exists (asks first), deploys the VMs, gives ops-ctl its admin key, and runs the whole playbook on ops-ctl through the Azure VM agent. It prints the new SSH command and the total time.
+
+If SSH to ops-ctl times out, your home IP has probably changed. Update the NSG rule:
+
+```bash
+az network nsg rule update -g $RG --nsg-name opswatch-nsg -n ssh-to-ops-ctl-from-admin \
+  --source-address-prefixes <new-laptop-ip>/32
+```
+
 ## Web UI (on ops-ctl)
 
 ```bash

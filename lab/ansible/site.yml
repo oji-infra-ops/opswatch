@@ -2,6 +2,7 @@
 #   ansible-playbook -i lab/ansible/hosts.ini lab/ansible/site.yml
 # ops-ctl reaches the other VMs as azureuser with its own key: run lab/azure/bootstrap-admin-key.sh first.
 # Safe to re-run: every task is idempotent.
+# Last play deploys OpsWatch itself: -e opswatch_version=v1.0 to pin a release.
 
 - name: Control node - monitoring key, name resolution, tools
   hosts: control
@@ -186,3 +187,83 @@
         fstype: ext4
         opts: defaults,nofail
         state: mounted
+
+- name: ops-ctl - deploy OpsWatch (code in /opt/opswatch, data in /var/lib/opswatch)
+  hosts: control
+  become: true
+  vars:
+    opswatch_repo: https://github.com/oji-infra-ops/opswatch.git
+    opswatch_version: spec-v1-implementation   # branch or tag, e.g. v1.0
+    opswatch_user: azureuser                   # owns the monitoring key ~/.ssh/opswatch
+  tasks:
+    - name: Code checkout
+      ansible.builtin.git:
+        repo: "{{ opswatch_repo }}"
+        dest: /opt/opswatch
+        version: "{{ opswatch_version }}"
+      notify: Restart web UI
+
+    - name: Virtualenv with OpsWatch and the web UI
+      ansible.builtin.pip:
+        name: "/opt/opswatch[web]"
+        virtualenv: /opt/opswatch/.venv
+        virtualenv_command: python3 -m venv
+        editable: true   # a new checkout takes effect without a reinstall
+      notify: Restart web UI
+
+    - name: Data directory
+      ansible.builtin.file:
+        path: /var/lib/opswatch
+        state: directory
+        owner: "{{ opswatch_user }}"
+        group: "{{ opswatch_user }}"
+        mode: "0750"
+
+    - name: Keep history from a hand-installed OpsWatch (first deploy only)
+      ansible.builtin.copy:
+        src: "/home/{{ opswatch_user }}/opswatch.db"
+        dest: /var/lib/opswatch/opswatch.db
+        remote_src: true
+        force: false
+        owner: "{{ opswatch_user }}"
+        group: "{{ opswatch_user }}"
+        mode: "0640"
+      failed_when: false
+
+    - name: Manual runs use the same database and inventory as the timer (one shared lock)
+      ansible.builtin.copy:
+        dest: /etc/profile.d/opswatch.sh
+        mode: "0644"
+        content: |
+          export OPSWATCH_DB=/var/lib/opswatch/opswatch.db
+          export OPSWATCH_INVENTORY=/opt/opswatch/context/inventory.yaml
+
+    - name: systemd units
+      ansible.builtin.copy:
+        src: "/opt/opswatch/deploy/systemd/{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        remote_src: true
+        mode: "0644"
+      loop: [opswatch.service, opswatch.timer, opswatch-web.service]
+      notify: Restart web UI
+
+    - name: Timer enabled and running
+      ansible.builtin.systemd:
+        name: opswatch.timer
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Web UI enabled and running (127.0.0.1:8000 only)
+      ansible.builtin.systemd:
+        name: opswatch-web
+        enabled: true
+        state: started
+        daemon_reload: true
+
+  handlers:
+    - name: Restart web UI
+      ansible.builtin.systemd:
+        name: opswatch-web
+        state: restarted
+        daemon_reload: true

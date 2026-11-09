@@ -76,6 +76,24 @@ CREATE TABLE IF NOT EXISTS streaks (
 """
 
 
+RETENTION_DAYS = 30
+RETENTION_SLOTS = RETENTION_DAYS * 24 * 12  # 5-minute slots
+
+# Results an incident or a streak still points at are kept past retention, so every
+# incident keeps its opening and resolving evidence and streaks stay valid.
+PRUNE_SQL = """
+DELETE FROM check_results
+WHERE slot < ?
+  AND id NOT IN (SELECT result_id FROM incident_events)
+  AND id NOT IN (SELECT open_result_1 FROM incidents)
+  AND id NOT IN (SELECT open_result_2 FROM incidents)
+  AND id NOT IN (SELECT resolve_result_1 FROM incidents WHERE resolve_result_1 IS NOT NULL)
+  AND id NOT IN (SELECT resolve_result_2 FROM incidents WHERE resolve_result_2 IS NOT NULL)
+  AND id NOT IN (SELECT open_first_result FROM streaks WHERE open_first_result IS NOT NULL)
+  AND id NOT IN (SELECT recover_first_result FROM streaks WHERE recover_first_result IS NOT NULL)
+"""
+
+
 class RunWriteError(Exception):
     """Writing a run failed; the transaction was rolled back and nothing was kept."""
 
@@ -86,6 +104,7 @@ class CommitOutcome:
     committed: bool  # False when the slot was already committed (retry): nothing written
     opened: int = 0
     resolved: int = 0
+    pruned: int = 0
 
 
 def connect(path: str) -> sqlite3.Connection:
@@ -136,8 +155,9 @@ def commit_run(
             change = _evaluate(conn, slot, cur.lastrowid, r)
             opened += change == "opened"
             resolved += change == "resolved"
+        pruned = conn.execute(PRUNE_SQL, (slot - RETENTION_SLOTS,)).rowcount
         conn.execute("COMMIT")
-        return CommitOutcome(slot, committed=True, opened=opened, resolved=resolved)
+        return CommitOutcome(slot, committed=True, opened=opened, resolved=resolved, pruned=pruned)
     except Exception as exc:
         if conn.in_transaction:
             conn.execute("ROLLBACK")
