@@ -12,7 +12,6 @@ Goal: four Ubuntu 24.04 VMs on Azure (ops-ctl, web01, app01, stor01), configured
 | 4 | [04-opswatch-user-key-only-login.png](04-opswatch-user-key-only-login.png) | `web01 as opswatch`, `app01 as opswatch`, `stor01 as opswatch` with `-i ~/.ssh/opswatch -o IdentitiesOnly=yes -o BatchMode=yes` | The monitoring account works with its own key only, the way OpsWatch connects. |
 | 5 | [05-first-live-dry-run-web01-403.png](05-first-live-dry-run-web01-403.png) | First `python -m opswatch run` on live hosts: 14 of 15 as predicted, `web01 http Critical HTTP 403` | OpsWatch caught a real lab misconfiguration: the nginx site had no `index` directive and Ubuntu ships `index.nginx-debian.html`, so `/` returned 403. Fixed in commit affb3e3. |
 | 6 | [06-playbook-rerun-idempotent.png](06-playbook-rerun-idempotent.png) | Re-run: web01 `changed=2`, all others `changed=0`, stor01 `skipped=1` | Idempotency: only the nginx fix was applied; the data disk was not reformatted. |
-
 | 7 | [07-dry-run-after-nginx-fix.png](07-dry-run-after-nginx-fix.png) | Dry run after the fix: `web01 http OK 200 in 0.02s`; cert Warning 9 days; app01/stor01 http and cert Not applicable; everything else OK | Fix verified by the same check that caught it. |
 
 ## Problems hit and fixes
