@@ -13,12 +13,10 @@ Goal: four Ubuntu 24.04 VMs on Azure (ops-ctl, web01, app01, stor01), configured
 | 5 | [05-first-live-dry-run-web01-403.png](05-first-live-dry-run-web01-403.png) | First `python -m opswatch run` on live hosts: 14 of 15 as predicted, `web01 http Critical HTTP 403` | OpsWatch caught a real lab misconfiguration: the nginx site had no `index` directive and Ubuntu ships `index.nginx-debian.html`, so `/` returned 403. Fixed in commit affb3e3. |
 | 6 | [06-playbook-rerun-idempotent.png](06-playbook-rerun-idempotent.png) | Re-run: web01 `changed=2`, all others `changed=0`, stor01 `skipped=1` | Idempotency: only the nginx fix was applied; the data disk was not reformatted. |
 
+| 7 | [07-dry-run-after-nginx-fix.png](07-dry-run-after-nginx-fix.png) | Dry run after the fix: `web01 http OK 200 in 0.02s`; cert Warning 9 days; app01/stor01 http and cert Not applicable; everything else OK | Fix verified by the same check that caught it. |
+
 ## Problems hit and fixes
 
 - **Azure capacity:** B1s was unavailable and B-series quota was 0, so the lab runs on `Standard_F1als_v7` in eastus, which is NVMe-only. `main.bicep` got a `diskControllerType` parameter, and the playbook finds the data disk under either SCSI or NVMe naming.
 - **Agent forwarding from Windows:** replaced by a dedicated ops-ctl admin key, scripted in `lab/azure/bootstrap-admin-key.sh`.
 - **nginx 403 on web01:** found by OpsWatch itself; fixed with `index index.html index.nginx-debian.html;`.
-
-## Still to capture for Day 2
-
-- Dry run after the nginx fix showing `web01 http OK`.
