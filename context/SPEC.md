@@ -177,7 +177,10 @@ See `severity.md`. Summary: Unknown is never shown as OK; incidents are keyed by
 - Runs happen on fixed five-minute slots aligned to the clock (`:00`, `:05`, `:10` …). Slot number = `floor(unix_time / 300)` at run start.
 - Only one run at a time. If a run is still active when the next slot fires, that slot is skipped.
 - Incident streaks use slot numbers to detect gaps, so a missed slot (including across a restart) breaks streaks.
-- systemd: `OnCalendar=*:0/5`, `Type=oneshot`; OpsWatch also takes a non-blocking file lock so a manual `--store` run can't overlap a scheduled one.
+- systemd: `OnCalendar=*:0/5`, `AccuracySec=1s`, `Persistent=false`, `Type=oneshot` (`deploy/systemd/`). Missed slots are not replayed.
+- A late start keeps the slot it started in: the slot is read once, at process start, never at commit. A run that starts at 12:04:59 and commits at 12:05:09 is the 12:00 slot.
+- Manual and scheduled runs are two entry points to the same lock: OpsWatch takes a non-blocking file lock at `<db>.lock` before reading or writing the slot, so whichever starts second skips. The guarantee holds for runs that use the same database file; the systemd unit sets `OPSWATCH_DB` to the file manual runs use by default.
+- Scheduler acceptance has two parts: (1) on ops-ctl, `deploy/verify-timer.sh` shows the timer armed on a slot boundary, systemd starting the service at that slot with exit 0, and that slot committed once with 15 results; (2) in the test suite, late start, missed slot, retried slot, and a manual run during a scheduled run.
 
 ## 7. Out of scope for v1
 

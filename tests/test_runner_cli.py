@@ -163,3 +163,54 @@ def test_simulated_offline_host_run_through_commit_is_under_budget(paths, capsys
     assert main(["run", "--inventory", inv, "--store", "--db", db], probes, process_start=start) == 0
     out = json.loads(capsys.readouterr().out)
     assert out["seconds_from_process_start_to_commit"] < 1.5
+
+
+# ------------------------------------------------------------ scheduling (SPEC §6.3)
+
+def test_late_start_keeps_the_slot_it_started_in(paths, capsys):
+    """A run that starts at 12:04:59.5 and commits after 12:05 belongs to the 12:00 slot."""
+    inv, db = paths
+    readings = iter([300 * 1000 + 299.5])  # only the start reading may decide the slot
+
+    def clock():
+        return next(readings, 300 * 1001 + 9)
+
+    assert main(["run", "--inventory", inv, "--store", "--db", db], stub_probes(), wall_clock=clock) == 0
+    assert json.loads(capsys.readouterr().out)["slot"] == 1000
+    conn = sqlite3.connect(db)
+    assert conn.execute("SELECT slot FROM runs").fetchall() == [(1000,)]
+
+
+def test_manual_run_during_scheduled_run_skips_and_rows_stay_single(paths, capsys, monkeypatch):
+    """The timer's run (DB from OPSWATCH_DB, as the systemd unit sets it) and a manual --db run
+    on the same file share one lock: the second skips, and the slot is written once."""
+    import threading
+
+    inv, db = paths
+    monkeypatch.setenv("OPSWATCH_DB", db)
+    clock = lambda: 300 * 2000 + 1  # noqa: E731 - both runs in slot 2000
+    inside, release = threading.Event(), threading.Event()
+
+    def held_disk(host):
+        inside.set()
+        release.wait(5)
+        return Observation("OK", "fine", "stub")
+
+    codes = {}
+    scheduled = threading.Thread(target=lambda: codes.update(
+        scheduled=main(["run", "--inventory", inv, "--store"], stub_probes(disk=held_disk), wall_clock=clock)))
+    scheduled.start()
+    assert inside.wait(5), "scheduled run never reached its checks"
+
+    manual_probed = []
+    codes["manual"] = main(["run", "--inventory", inv, "--store", "--db", db],
+                           stub_probes(disk=lambda h: manual_probed.append(h)), wall_clock=clock)
+    release.set()
+    scheduled.join(10)
+
+    assert codes == {"scheduled": 0, "manual": 0}
+    assert manual_probed == []
+    assert "skipped" in capsys.readouterr().err
+    conn = sqlite3.connect(db)
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM check_results").fetchone()[0] == 15
