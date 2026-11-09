@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Incidents · OpsWatch{% endblock %}
+{% block body %}
+<h1>Incidents</h1>
+<form class="inline" method="get" action="/incidents">
+  <label for="host">Host</label>
+  <select id="host" name="host" onchange="this.form.submit()">
+    <option value="">All hosts</option>
+    {% for h in hosts %}<option value="{{ h }}" {% if h == host %}selected{% endif %}>{{ h }}</option>{% endfor %}
+  </select>
+  <noscript><button>Filter</button></noscript>
+</form>
+<div class="scroll">
+<table>
+  <tr><th>#</th><th>Status</th><th>Host / check</th><th>Severity</th><th>Opened (UTC)</th><th>Resolved (UTC)</th><th>Duration</th></tr>
+  {% for i in incidents %}
+  <tr>
+    <td><a href="/incidents/{{ i.id }}">{{ i.id }}</a></td>
+    <td><span class="pill {{ i.status }}">{{ i.status }}</span></td>
+    <td>{{ i.host }} / {{ i.check_name }}</td>
+    <td><span class="sev {{ i.severity }}">{{ i.severity }}</span></td>
+    <td>{{ i.opened_at }}</td><td>{{ i.resolved_at or '' }}</td><td>{{ duration(i.opened_at, i.resolved_at) }}</td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">No incidents{% if host %} for {{ host }}{% endif %}.</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}

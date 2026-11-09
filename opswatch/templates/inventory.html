@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Inventory · OpsWatch{% endblock %}
+{% block body %}
+<h1>Inventory</h1>
+<p class="muted">Hosts as last written by a run from <code>inventory.yaml</code>.</p>
+<div class="scroll">
+<table>
+  <tr><th>Host</th><th>Role</th><th>Address</th><th>Last check (UTC)</th></tr>
+  {% for h in hosts %}
+  <tr><td><b>{{ h.name }}</b></td><td>{{ h.role }}</td><td>{{ h.address }}</td><td>{{ h.last_check or 'never' }}</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">No hosts yet: no run has been committed.</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}

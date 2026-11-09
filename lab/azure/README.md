@@ -70,3 +70,13 @@ If SSH to ops-ctl times out, your home IP has probably changed. Update the NSG r
 az network nsg rule update -g $RG --nsg-name opswatch-nsg -n ssh-to-ops-ctl-from-admin \
   --source-address-prefixes <new-laptop-ip>/32
 ```
+
+## Web UI (on ops-ctl)
+
+```bash
+cd ~/opswatch && .venv/bin/pip install -q -e ".[web]"
+sudo cp deploy/systemd/opswatch-web.service /etc/systemd/system/ && sudo systemctl daemon-reload
+sudo systemctl enable --now opswatch-web
+```
+
+It listens on `127.0.0.1:8000` only (no login). From your laptop: `ssh -L 8000:127.0.0.1:8000 azureuser@<ops-ctl public IP>`, then open http://localhost:8000.

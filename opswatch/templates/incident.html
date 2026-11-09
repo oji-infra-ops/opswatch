@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Incident {{ i.id }} · OpsWatch{% endblock %}
+{% block body %}
+<h1>Incident {{ i.id }}: {{ i.host }} / {{ i.check_name }} <span class="pill {{ i.status }}">{{ i.status }}</span> <span class="sev {{ i.severity }}">{{ i.severity }}</span></h1>
+<p>
+  Opened {{ i.opened_at }} (slot {{ i.opened_slot }}, {{ i.opening_severity }})
+  {% if i.resolved_at %}· resolved {{ i.resolved_at }} (slot {{ i.resolved_slot }}) · {{ duration }}{% endif %}
+  · <a href="/incidents/{{ i.id }}/report.md">Download report (.md)</a>
+</p>
+<h2>Timeline (UTC)</h2>
+<div class="scroll">
+<table>
+  <tr><th>Slot</th><th>Time</th><th>Severity</th><th>Value</th><th>Event</th></tr>
+  {% set ev = {} %}{% for e in events %}{% set _ = ev.update({e.slot: e.kind}) %}{% endfor %}
+  {% for r in results %}
+  <tr><td>{{ r.slot }}</td><td>{{ r.timestamp }}</td><td><span class="sev {{ r.severity }}">{{ r.severity }}</span></td><td>{{ r.value }}</td><td>{{ ev.get(r.slot, '') }}</td></tr>
+  {% endfor %}
+</table>
+</div>
+<h2>Evidence that opened it</h2>
+<pre>{{ i.opening_evidence }}</pre>
+{% for e in events if e.kind == 'resolved' %}
+<h2>Evidence that resolved it</h2>
+<pre>{{ e.evidence }}</pre>
+{% endfor %}
+<h2 id="notes">Resolution notes</h2>
+{% if i.resolution_notes %}<pre>{{ i.resolution_notes }}</pre>{% else %}<p class="muted">None yet.</p>{% endif %}
+<form method="post" action="/incidents/{{ i.id }}/notes">
+  <label for="note">Add a note (what you found, what you did)</label>
+  <textarea id="note" name="note" maxlength="{{ note_max }}" required></textarea>
+  <button>Add note</button>
+</form>
+{% endblock %}
