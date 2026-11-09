@@ -18,3 +18,6 @@ Each choice and the context file that drove it.
 | Non-blocking `flock` on `<db>.lock`; held lock → slot skipped, exit 0 | One run at a time even for manual `--store` runs | SPEC §6.3 |
 | Duplicate YAML keys rejected by a custom SafeLoader | PyYAML otherwise keeps the last duplicate host silently | SPEC §1 |
 | `NOT-RELEVANT.md` not used | Old nginx notes; out of scope | context/NOT-RELEVANT.md |
+| SSH options add `IdentitiesOnly=yes` and `IdentityAgent=none` | A forwarded ssh-agent made every check stall (9.8 s healthy run); the inventory key is the only identity and no agent is contacted (1.6 s) | SPEC §2, docs/evidence/day-2 |
+| Lab on Azure, `Standard_F1als_v7` in eastus with NVMe disk controller | B1s capacity unavailable and B-series quota 0 on the subscription; F1als_v7 had quota and capacity | lab/azure/README.md |
+| ops-ctl has its own admin key for Ansible instead of `ssh -A` | Windows OpenSSH agent forwarding lists the key but can't sign; a control node shouldn't depend on a laptop session anyway | lab/azure/bootstrap-admin-key.sh |
