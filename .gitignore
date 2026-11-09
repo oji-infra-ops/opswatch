@@ -4,3 +4,4 @@ __pycache__/
 *.db
 .vagrant/
 lab/keys/
+*.egg-info/
