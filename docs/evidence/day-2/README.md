@@ -13,6 +13,7 @@ Goal: four Ubuntu 24.04 VMs on Azure (ops-ctl, web01, app01, stor01), configured
 | 5 | [05-first-live-dry-run-web01-403.png](05-first-live-dry-run-web01-403.png) | First `python -m opswatch run` on live hosts: 14 of 15 as predicted, `web01 http Critical HTTP 403` | OpsWatch caught a real lab misconfiguration: the nginx site had no `index` directive and Ubuntu ships `index.nginx-debian.html`, so `/` returned 403. Fixed in commit affb3e3. |
 | 6 | [06-playbook-rerun-idempotent.png](06-playbook-rerun-idempotent.png) | Re-run: web01 `changed=2`, all others `changed=0`, stor01 `skipped=1` | Idempotency: only the nginx fix was applied; the data disk was not reformatted. |
 | 7 | [07-dry-run-after-nginx-fix.png](07-dry-run-after-nginx-fix.png) | Dry run after the fix: `web01 http OK 200 in 0.02s`; cert Warning 9 days; app01/stor01 http and cert Not applicable; everything else OK | Fix verified by the same check that caught it. |
+| 8 | [08-first-stored-run.png](08-first-stored-run.png) | `run --store`: slot 5980816 committed, 15 results, 0 incidents, `not_ok` = web01/cert Warning + 4 Not applicable; 9.841 s process start to commit | First real-lab timing. Under 15 s, but far slower than expected for healthy hosts: under investigation (forwarded SSH agent tried before the opswatch key). |
 
 ## Problems hit and fixes
 
