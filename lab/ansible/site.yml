@@ -90,6 +90,7 @@
               ssl_certificate     /etc/ssl/certs/web01.crt;
               ssl_certificate_key /etc/ssl/private/web01.key;
               root /var/www/html;
+              index index.html index.nginx-debian.html;
           }
       notify: Reload nginx
 
