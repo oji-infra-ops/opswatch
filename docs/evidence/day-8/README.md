@@ -7,6 +7,8 @@ Scheduler acceptance has two parts (SPEC §6.3): the slot logic is proven by the
 | 0 | [00-units-installed.png](00-units-installed.png) | `deploy/systemd/opswatch.{service,timer}` copied to `/etc/systemd/system`, `daemon-reload`, `enable --now opswatch.timer` | Timer armed now and on every boot. |
 | 1 | [01-scheduler-verified.png](01-scheduler-verified.png) | `verify-timer.sh`: next firing 18:20:00Z on a slot boundary (slot 5980828); systemd started the service at 18:20:00Z and it exited 0; journal shows `"committed": true`; slot committed exactly once with 15 results, no duplicates. `SCHEDULER VERIFIED` | systemd, not a person, runs OpsWatch on the slot, and the run lands in SQLite once. |
 
+| 2 | [02-incident-opened.png](02-incident-opened.png) | Drill: `opswatch-demo` stopped on app01 after the 18:20 run. app01/services: OK at 5980828, Critical `opswatch-demo inactive` at 5980829, 5980830, 5980831. Incident #3 app01/services opened Critical at **5980830**, the second consecutive Critical slot | A stopped (inactive, not failed) unit is caught by the per-unit `is-active` check, and the incident opens on the second bad slot, not the first. Also open: #1 web01/cert Warning (10-day cert) and #2 stor01/uptime Warning (stor01 was rebooted for the Day 2 outage test, uptime < 1 h for two slots). |
+
 ## Slot logic, proven in tests (74 pass)
 
 - Late start keeps the slot it started in: `test_late_start_keeps_the_slot_it_started_in`
