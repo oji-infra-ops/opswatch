@@ -17,6 +17,10 @@ param adminUsername string = 'azureuser'
 @description('VM size for all four VMs.')
 param vmSize string = 'Standard_B1s'
 
+@description('Disk controller. Newer sizes (v6/v7) may support NVMe only.')
+@allowed([ 'SCSI', 'NVMe' ])
+param diskControllerType string = 'SCSI'
+
 @description('Daily auto-shutdown time, 24h HHmm, in the time zone below.')
 param shutdownTime string = '2300'
 
@@ -113,6 +117,7 @@ resource machines 'Microsoft.Compute/virtualMachines@2024-03-01' = [for (vm, i) 
       }
     }
     storageProfile: {
+      diskControllerType: diskControllerType
       imageReference: {
         publisher: 'Canonical'
         offer: 'ubuntu-24_04-lts'

@@ -156,9 +156,18 @@
 - name: stor01 - 4 GiB data disk at /data
   hosts: stor01
   become: true
-  vars:
-    data_disk: /dev/disk/azure/scsi1/lun0
   tasks:
+    - name: Find the LUN 0 data disk (SCSI or NVMe naming)
+      ansible.builtin.shell: >-
+        for p in /dev/disk/azure/data/by-lun/0 /dev/disk/azure/scsi1/lun0; do
+        [ -e "$p" ] && readlink -f "$p" && exit 0; done; exit 1
+      register: lun0
+      changed_when: false
+
+    - name: Remember the data disk path
+      ansible.builtin.set_fact:
+        data_disk: "{{ lun0.stdout }}"
+
     - name: Check for an existing filesystem
       ansible.builtin.command: blkid {{ data_disk }}
       register: blkid
