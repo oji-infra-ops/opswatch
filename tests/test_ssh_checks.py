@@ -1,3 +1,4 @@
+import os
 import time
 
 from conftest import make_host
@@ -10,7 +11,7 @@ from opswatch.sshchecks import (
     parse_uptime,
     services_script,
 )
-from opswatch.sshrun import SSH_DEADLINE_SECONDS, CmdResult, run_with_deadline
+from opswatch.sshrun import SSH_DEADLINE_SECONDS, CmdResult, run_with_deadline, ssh_argv
 
 HEADER = "Filesystem     1024-blocks    Used Available Capacity Mounted on"
 
@@ -180,3 +181,16 @@ def test_run_with_deadline_kills_process_group():
     res = run_with_deadline(["sh", "-c", "sleep 30 & sleep 30"], 0.5)
     assert res.timed_out and res.transport_failed
     assert time.monotonic() - t0 < 3
+
+
+def test_ssh_argv_uses_spec_options_and_only_the_inventory_key():
+    argv = ssh_argv(make_host("web01"), "true")
+    opts = [argv[i + 1] for i, a in enumerate(argv) if a == "-o"]
+    assert opts == [
+        "BatchMode=yes",
+        "ConnectTimeout=10",
+        "StrictHostKeyChecking=accept-new",
+        "IdentitiesOnly=yes",
+    ]
+    assert argv[argv.index("-i") + 1] == os.path.expanduser("~/.ssh/opswatch")
+    assert argv[argv.index("-l") + 1] == "opswatch"

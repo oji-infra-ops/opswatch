@@ -28,7 +28,7 @@ Lab note: the web01 URL is `https://web01/`, with `web01` resolved through `/etc
 ## 2. Access and deadlines
 
 - Each monitored host has a dedicated `opswatch` user, key-based SSH only. Every remote command is read-only. No `sudo`.
-- SSH options for every connection: `BatchMode=yes`, `ConnectTimeout=10`, `StrictHostKeyChecking=accept-new`.
+- SSH options for every connection: `BatchMode=yes`, `ConnectTimeout=10`, `StrictHostKeyChecking=accept-new`, `IdentitiesOnly=yes`. The inventory key is the only identity offered, so an ssh-agent in the environment (for example one forwarded by `ssh -A`) can never slow or change a check.
 - Every remote command runs with `LC_ALL=C` so output format is predictable.
 - **One hard 10-second deadline per SSH check**, covering connection and every command in it. The services check runs both of its parts in one SSH session under that one deadline. When the deadline passes, the `ssh` process and its children are killed and the check is Unknown.
 - HTTP and certificate probes have a 5-second end-to-end deadline per URL (§4.4, §4.5).
