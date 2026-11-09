@@ -159,4 +159,4 @@ resource shutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = [for (vm, i) in 
 }]
 
 output opsCtlPublicIp string = pip.properties.ipAddress
-output sshCommand string = 'ssh -A ${adminUsername}@${pip.properties.ipAddress}'
+output sshCommand string = 'ssh ${adminUsername}@${pip.properties.ipAddress}'

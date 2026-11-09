@@ -1,6 +1,6 @@
 # Builds the OpsWatch lab roles on the Azure VMs. Run on ops-ctl, from the repo root:
 #   ansible-playbook -i lab/ansible/hosts.ini lab/ansible/site.yml
-# Connect to ops-ctl with `ssh -A` so Ansible can reach the other VMs with your key.
+# ops-ctl reaches the other VMs as azureuser with its own key: run lab/azure/bootstrap-admin-key.sh first.
 # Safe to re-run: every task is idempotent.
 
 - name: Control node - monitoring key, name resolution, tools

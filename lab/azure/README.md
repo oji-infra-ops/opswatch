@@ -11,7 +11,7 @@ Four Ubuntu 24.04 VMs on one private subnet (`10.10.1.0/24`). Only `ops-ctl` has
 
 ## Cost
 
-Default size is `Standard_B1s`. Four of them running all month, plus disks and one public IP, is roughly US$35–45/month in most US regions. Every VM auto-shuts down daily at `shutdownTime`; a deallocated VM stops compute charges (disks and the static IP still bill). Delete the resource group when the project is done.
+Default size is `Standard_B1s`, but many subscriptions can't get B-series capacity or quota. The working lab uses `vmSize=Standard_F1als_v7` in `eastus`, which only supports NVMe disks, so it also needs `diskControllerType=NVMe`. Check current prices in the Azure pricing calculator before leaving all four VMs running. Every VM auto-shuts down daily at `shutdownTime`; a deallocated VM stops compute charges (disks and the static IP still bill). Delete the resource group when the project is done.
 
 Set a budget alert once: Portal → Cost Management → Budgets → e.g. US$25 with an email at 80%.
 
@@ -25,17 +25,35 @@ MYIP=$(curl -s https://api.ipify.org)      # run this on YOUR laptop, not Cloud 
 az deployment group create -g $RG -f lab/azure/main.bicep \
   -p adminPublicKey="$(cat ~/.ssh/id_ed25519.pub)" \
      allowedSshSource="<your-laptop-ip>/32" \
-     shutdownTimeZone="Eastern Standard Time"
+     shutdownTimeZone="Pacific Standard Time" \
+     vmSize=Standard_F1als_v7 diskControllerType=NVMe
 az deployment group show -g $RG -n main --query properties.outputs
 ```
 
-`adminPublicKey` must be the public key of the machine you'll SSH **from** (your laptop). If you don't have one: `ssh-keygen -t ed25519`.
+`adminPublicKey` must be the public key of the machine you'll SSH **from** (your laptop). If you don't have one: `ssh-keygen -t ed25519`. If you already have one, don't run `ssh-keygen` again: it overwrites the key the VMs trust.
+
+## Give ops-ctl its own admin key (once per deploy)
+
+```bash
+bash lab/azure/bootstrap-admin-key.sh
+```
+
+Ansible runs on ops-ctl and logs into the other three VMs as `azureuser`. Agent forwarding (`ssh -A`) from Windows' built-in OpenSSH lists your key but can't sign with it, so ops-ctl gets a key of its own. The script creates it on ops-ctl and adds its public half to the other VMs through the Azure VM agent. The private key never leaves ops-ctl.
+
+## Configure the VMs (on ops-ctl)
+
+```bash
+sudo apt-get update && sudo apt-get install -y ansible git
+git clone -b spec-v1-implementation https://github.com/oji-infra-ops/opswatch.git && cd opswatch
+ansible all -i lab/ansible/hosts.ini -m ping             # all four must answer pong
+ansible-playbook -i lab/ansible/hosts.ini lab/ansible/site.yml
+```
 
 ## Daily use
 
 ```bash
 az vm start      --ids $(az vm list -g $RG --query "[].id" -o tsv)   # morning
-ssh -A azureuser@<ops-ctl public IP>                                   # -A forwards your key for Ansible
+ssh azureuser@<ops-ctl public IP>
 az vm deallocate --ids $(az vm list -g $RG --query "[].id" -o tsv)   # evening, if before auto-shutdown
 ```
 
@@ -43,5 +61,12 @@ az vm deallocate --ids $(az vm list -g $RG --query "[].id" -o tsv)   # evening, 
 
 ```bash
 az group delete -n $RG --yes
-# then Deploy again, then run lab/ansible/site.yml from ops-ctl
+# then Deploy, bootstrap-admin-key.sh, and Configure the VMs again
+```
+
+If SSH to ops-ctl times out, your home IP has probably changed. Update the NSG rule:
+
+```bash
+az network nsg rule update -g $RG --nsg-name opswatch-nsg -n ssh-to-ops-ctl-from-admin \
+  --source-address-prefixes <new-laptop-ip>/32
 ```
