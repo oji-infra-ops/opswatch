@@ -1,0 +1,178 @@
+# Builds the OpsWatch lab roles on the Azure VMs. Run on ops-ctl, from the repo root:
+#   ansible-playbook -i lab/ansible/hosts.ini lab/ansible/site.yml
+# Connect to ops-ctl with `ssh -A` so Ansible can reach the other VMs with your key.
+# Safe to re-run: every task is idempotent.
+
+- name: Control node - monitoring key, name resolution, tools
+  hosts: control
+  become: true
+  tasks:
+    - name: Packages OpsWatch needs on ops-ctl
+      ansible.builtin.apt:
+        name: [python3-venv, sqlite3, git]
+        update_cache: true
+
+    - name: OpsWatch monitoring key (read-only access to the monitored hosts)
+      become: false
+      ansible.builtin.command:
+        cmd: ssh-keygen -t ed25519 -N "" -C opswatch@ops-ctl -f /home/azureuser/.ssh/opswatch
+        creates: /home/azureuser/.ssh/opswatch
+
+    - name: Read the monitoring public key
+      ansible.builtin.slurp:
+        src: /home/azureuser/.ssh/opswatch.pub
+      register: opswatch_pub
+
+    - name: web01 resolves by name, so TLS hostname checks work
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '\sweb01$'
+        line: "10.10.1.11 web01"
+
+    - name: Directory for trust anchors
+      ansible.builtin.file:
+        path: /etc/opswatch
+        state: directory
+        mode: "0755"
+
+- name: Monitored hosts - opswatch user with the monitoring key only
+  hosts: monitored
+  become: true
+  tasks:
+    - name: opswatch user
+      ansible.builtin.user:
+        name: opswatch
+        shell: /bin/bash
+
+    - name: .ssh directory
+      ansible.builtin.file:
+        path: /home/opswatch/.ssh
+        state: directory
+        owner: opswatch
+        group: opswatch
+        mode: "0700"
+
+    - name: Authorized key from ops-ctl
+      ansible.builtin.copy:
+        content: "{{ hostvars['ops-ctl'].opswatch_pub.content | b64decode }}"
+        dest: /home/opswatch/.ssh/authorized_keys
+        owner: opswatch
+        group: opswatch
+        mode: "0600"
+
+- name: web01 - nginx with a 10-day self-signed cert for web01
+  hosts: web01
+  become: true
+  tasks:
+    - name: nginx
+      ansible.builtin.apt:
+        name: nginx
+        update_cache: true
+
+    - name: Self-signed cert, CN and SAN web01, valid 10 days
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 10
+          -subj /CN=web01 -addext subjectAltName=DNS:web01
+          -addext basicConstraints=critical,CA:TRUE
+          -addext keyUsage=critical,digitalSignature,keyCertSign
+          -keyout /etc/ssl/private/web01.key -out /etc/ssl/certs/web01.crt
+        creates: /etc/ssl/certs/web01.crt
+      notify: Reload nginx
+
+    - name: HTTPS site
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/opswatch-lab
+        content: |
+          server {
+              listen 443 ssl default_server;
+              server_name web01;
+              ssl_certificate     /etc/ssl/certs/web01.crt;
+              ssl_certificate_key /etc/ssl/private/web01.key;
+              root /var/www/html;
+          }
+      notify: Reload nginx
+
+    - name: Enable HTTPS site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/opswatch-lab
+        dest: /etc/nginx/sites-enabled/opswatch-lab
+        state: link
+      notify: Reload nginx
+
+    - name: Copy the cert to ops-ctl as web01's trust anchor
+      ansible.builtin.fetch:
+        src: /etc/ssl/certs/web01.crt
+        dest: /tmp/opswatch-web01.crt
+        flat: true
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+
+- name: ops-ctl - install web01's trust anchor
+  hosts: control
+  become: true
+  tasks:
+    - name: Trust anchor for web01 (inventory ca_cert)
+      ansible.builtin.copy:
+        src: /tmp/opswatch-web01.crt
+        dest: /etc/opswatch/web01.crt
+        mode: "0644"
+
+- name: app01 - demo service you can stop and break
+  hosts: app01
+  become: true
+  tasks:
+    - name: Demo script
+      ansible.builtin.copy:
+        dest: /usr/local/bin/opswatch-demo.sh
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          while true; do echo alive; sleep 30; done
+
+    - name: Demo unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/opswatch-demo.service
+        content: |
+          [Unit]
+          Description=OpsWatch demo service
+          [Service]
+          ExecStart=/usr/local/bin/opswatch-demo.sh
+          Restart=no
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Demo service enabled and running
+      ansible.builtin.systemd:
+        name: opswatch-demo
+        enabled: true
+        state: started
+        daemon_reload: true
+
+- name: stor01 - 4 GiB data disk at /data
+  hosts: stor01
+  become: true
+  vars:
+    data_disk: /dev/disk/azure/scsi1/lun0
+  tasks:
+    - name: Check for an existing filesystem
+      ansible.builtin.command: blkid {{ data_disk }}
+      register: blkid
+      changed_when: false
+      failed_when: blkid.rc not in [0, 2]
+
+    - name: Make the filesystem (first run only)
+      ansible.builtin.command: mkfs.ext4 -L data {{ data_disk }}
+      when: blkid.rc == 2
+
+    - name: Mount /data by label
+      ansible.posix.mount:
+        path: /data
+        src: LABEL=data
+        fstype: ext4
+        opts: defaults,nofail
+        state: mounted

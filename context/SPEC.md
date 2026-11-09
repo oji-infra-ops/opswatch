@@ -4,14 +4,14 @@ OpsWatch is an agentless Linux health console. One control node (`ops-ctl`) conn
 
 ## 1. Inventory
 
-`inventory.yaml` is the **only** runtime source of hosts, addresses, SSH users, key paths, URLs and trust anchors. Code never hard-codes any of them. The table below is the lab fixture the inventory describes, not a runtime input.
+`inventory.yaml` is the **only** runtime source of hosts, addresses, SSH users, key paths, URLs and trust anchors. Code never hard-codes any of them. The table below is the lab fixture the inventory describes, not a runtime input. The lab runs on Azure (`lab/azure/main.bicep`, built by `lab/ansible/site.yml`).
 
 | Host    | Address        | Role         | What's on it                                             | Used to test        |
 |---------|----------------|--------------|----------------------------------------------------------|---------------------|
-| ops-ctl | 192.168.56.10  | Control node | OpsWatch code, SQLite DB, SSH private key, systemd timer | Runs everything     |
-| web01   | 192.168.56.11  | Web server   | nginx on 443, self-signed cert for `web01` valid 10 days | HTTP, cert expiry   |
-| app01   | 192.168.56.12  | App server   | `opswatch-demo.service` (dummy systemd unit)             | Services            |
-| stor01  | 192.168.56.13  | Storage      | 2 GB data disk mounted at `/data`                        | Disk thresholds     |
+| ops-ctl | 10.10.1.10     | Control node | OpsWatch code, SQLite DB, SSH private key, systemd timer | Runs everything     |
+| web01   | 10.10.1.11     | Web server   | nginx on 443, self-signed cert for `web01` valid 10 days | HTTP, cert expiry   |
+| app01   | 10.10.1.12     | App server   | `opswatch-demo.service` (dummy systemd unit)             | Services            |
+| stor01  | 10.10.1.13     | Storage      | 4 GiB Azure data disk mounted at `/data`                 | Disk thresholds     |
 
 Inventory validation happens before any probe starts. A run is refused (run-level error, nothing written) when:
 

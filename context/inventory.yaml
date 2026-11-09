@@ -6,18 +6,18 @@ defaults:
 
 hosts:
   web01:
-    address: 192.168.56.11
+    address: 10.10.1.11
     role: web
     services: [nginx]
     urls:
       - https://web01/          # web01 must resolve via /etc/hosts on ops-ctl
-    ca_cert: /opswatch/context/certs/web01.crt   # web01's self-signed cert, copied on Day 3
+    ca_cert: /etc/opswatch/web01.crt   # installed on ops-ctl by lab/ansible/site.yml
 
   app01:
-    address: 192.168.56.12
+    address: 10.10.1.12
     role: app
     services: [opswatch-demo]
 
   stor01:
-    address: 192.168.56.13
+    address: 10.10.1.13
     role: storage
