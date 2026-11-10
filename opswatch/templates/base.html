@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}OpsWatch{% endblock %}</title>
+<style>
+  :root { --ok:#1f7a3a; --ok-bg:#e3f4e8; --warn:#8a5a00; --warn-bg:#fff2cc; --crit:#a4161a; --crit-bg:#fde2e1;
+          --unk:#4b2e83; --unk-bg:#ece6f7; --na:#6b7280; --line:#d9dce1; --ink:#1d2129; --muted:#5f6670; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:#f7f8fa; }
+  header { background:#1d2129; color:#fff; padding:12px 20px; display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+  header b { font-size:17px; letter-spacing:.3px; }
+  header a { color:#cfd5de; text-decoration:none; } header a:hover { color:#fff; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { font-size:20px; margin:0 0 12px; } h2 { font-size:16px; margin:24px 0 8px; }
+  table { border-collapse:collapse; width:100%; background:#fff; border:1px solid var(--line); }
+  th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { background:#eef0f3; font-weight:600; font-size:13px; }
+  .scroll { overflow-x:auto; }
+  .sev { display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; font-size:13px; white-space:nowrap; }
+  .OK { color:var(--ok); background:var(--ok-bg); }
+  .Warning { color:var(--warn); background:var(--warn-bg); }
+  .Critical { color:var(--crit); background:var(--crit-bg); }
+  /* Unknown is never mistaken for OK: different colour, a hatch, and a "?" */
+  .Unknown { color:var(--unk); background:repeating-linear-gradient(45deg, var(--unk-bg), var(--unk-bg) 6px, #dcd2ef 6px, #dcd2ef 12px); }
+  .Unknown::before { content:"? "; }
+  .NA { color:var(--na); background:transparent; border:1px dashed var(--line); font-weight:400; }
+  .addr { display:block; font-size:12px; color:var(--muted); }
+  .pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600; border:1px solid var(--line); }
+  .pill.open { color:var(--crit); border-color:#f3b5b2; } .pill.resolved { color:var(--ok); border-color:#b5dfc1; }
+  td.cell .val { display:block; font-size:12px; color:var(--muted); margin-top:3px; }
+  .banner { padding:10px 14px; border-radius:6px; margin:0 0 14px; }
+  .banner.stale { background:var(--unk-bg); color:var(--unk); border:1px solid #c9b8ea; }
+  .banner.fresh { background:#fff; border:1px solid var(--line); color:var(--muted); }
+  pre { background:#fff; border:1px solid var(--line); padding:10px; overflow-x:auto; font-size:13px; white-space:pre-wrap; }
+  .muted { color:var(--muted); } a { color:#1a56b0; }
+  form.inline { display:flex; gap:8px; align-items:center; margin:0 0 12px; flex-wrap:wrap; }
+  textarea { width:100%; min-height:80px; font:inherit; padding:8px; }
+  button, select { font:inherit; padding:6px 12px; }
+  .legend { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 0; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <b>OpsWatch</b>
+  <a href="/">Status</a><a href="/inventory">Inventory</a><a href="/incidents">Incidents</a><a href="/reports/summary.md">Weekly summary (.md)</a>
+</header>
+<main>{% block body %}{% endblock %}</main>
+</body>
+</html>

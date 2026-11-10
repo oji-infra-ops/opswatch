@@ -1,0 +1,12 @@
+# Fires on fixed 5-minute slots aligned to the clock (:00, :05, :10 ...), SPEC §6.3.
+# A slot missed while ops-ctl was off is not replayed: the gap breaks incident streaks, as specified.
+[Unit]
+Description=Run OpsWatch every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=1s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

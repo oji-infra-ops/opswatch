@@ -1,0 +1,17 @@
+# OpsWatch web UI (Days 9–10). No login, so it listens on 127.0.0.1 only:
+# reach it from your laptop with  ssh -L 8000:127.0.0.1:8000 azureuser@<ops-ctl public IP>
+[Unit]
+Description=OpsWatch web UI
+After=network-online.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/opt/opswatch
+Environment=OPSWATCH_DB=/var/lib/opswatch/opswatch.db
+ExecStart=/opt/opswatch/.venv/bin/uvicorn opswatch.web:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

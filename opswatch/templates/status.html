@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Status · OpsWatch{% endblock %}
+{% block body %}
+<h1>Status</h1>
+{% if not run %}
+  <div class="banner stale">No runs recorded yet. Nothing here is known to be healthy.</div>
+{% elif stale %}
+  <div class="banner stale"><b>Stale:</b> the last run started {{ age_min }} min ago (slot {{ run.slot }}, {{ run.started_at }}). These results are not current; treat every host as Unknown until the timer runs again.</div>
+{% else %}
+  <div class="banner fresh">Last run: slot {{ run.slot }}, started {{ run.started_at }} ({{ age_min }} min ago), {{ '%.1f' % run.elapsed_seconds }} s to commit.</div>
+{% endif %}
+<div class="scroll">
+<table>
+  <tr><th>Host</th>{% for c in checks %}<th>{{ c }}</th>{% endfor %}</tr>
+  {% for h in hosts %}
+  <tr>
+    <td><b>{{ h.name }}</b><span class="addr">{{ h.address }}</span></td>
+    {% for c in checks %}
+      {% set r = cells.get((h.name, c)) %}
+      <td class="cell">
+      {% if not r %}<span class="sev Unknown">no result</span>
+      {% elif not r.applicable %}<span class="sev NA">n/a</span>
+      {% else %}<span class="sev {{ r.severity }}">{{ r.severity }}</span><span class="val">{{ r.value }}</span>{% endif %}
+      {% if open_keys.get((h.name, c)) %}<span class="val"><a href="/incidents/{{ open_keys[(h.name, c)] }}">open incident #{{ open_keys[(h.name, c)] }}</a></span>{% endif %}
+      </td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<div class="legend"><span class="sev OK">OK</span><span class="sev Warning">Warning</span><span class="sev Critical">Critical</span><span class="sev Unknown">Unknown</span><span class="sev NA">n/a = nothing to check on this host</span></div>
+{% endblock %}
