@@ -180,8 +180,8 @@ First three commands:
 
 Likely causes, in order:
 
-1. Host off or deallocated (the Day 2 acceptance test: stor01 deallocated → all three SSH checks `Unknown ssh failed`).
-2. Key or user problem: `Permission denied (publickey)` in step 1 (authorized_keys changed, `opswatch` user missing after a rebuild without the playbook).
+1. Host off or deallocated (the Day 2 acceptance test: stor01 deallocated → all three SSH checks `Unknown ssh failed`). Step 1 says `No route to host` almost at once (same subnet, nothing answers ARP; seen on Day 11), or `Connection timed out` after 10 s from another network.
+2. Key or user problem: `Permission denied (publickey)` in step 1 (the network is fine: the host answered) (authorized_keys changed, `opswatch` user missing after a rebuild without the playbook).
 3. Slow logins close to the deadline. Seen on the lab: a forwarded ssh-agent made every check stall (9.8 s healthy run). OpsWatch now passes `IdentityAgent=none`; if checks are slow again, compare step 1's timing with and without `SSH_AUTH_SOCK=`.
 
 Fix:
